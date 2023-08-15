@@ -1,9 +1,17 @@
 import { useForm } from "react-hook-form"
 import { yupResolver } from "@hookform/resolvers/yup"
+import { useNavigate, Link } from "react-router-dom"
+import { toast } from "react-hot-toast"
+import { PulseLoader } from "react-spinners"
+
 import { signUpSchema } from "../../utils/validation"
 import AuthInput from "./AuthInput"
+import { useUser } from "../../hooks/useUser"
 
 const RegisterForm = () => {
+  const navigate = useNavigate()
+  const { registerUser, status } = useUser()
+
   const {
     register,
     handleSubmit,
@@ -12,8 +20,14 @@ const RegisterForm = () => {
     resolver: yupResolver(signUpSchema),
   })
 
-  const onSubmit = (data) => {
-    console.log("data: ", data)
+  const onSubmit = async (data) => {
+    const result = await registerUser(data)
+    if (result.success) {
+      navigate("/")
+      toast.success(result.message)
+    } else {
+      toast.error(result.message)
+    }
   }
 
   return (
@@ -55,7 +69,28 @@ const RegisterForm = () => {
             register={register}
             error={errors?.password?.message}
           />
-          <button type="submit">submit</button>
+
+          <button
+            type="submit"
+            className="w-full flex justify-center bg-green_1 text-gray-100 p-4 rounded-full tracking-wide
+          font-semibold focus:outline-none hover:bg-green_2 shadow-lg cursor-pointer transition ease-in duration-300"
+          >
+            {status === "loading" ? (
+              <PulseLoader color="#fff" size={14} />
+            ) : (
+              "Sign Up"
+            )}
+          </button>
+
+          <p className="flex flex-col items-center justify-center mt-10 text-center text-md dark:text-dark_text_1">
+            <span>have an account ?</span>
+            <Link
+              to="/login"
+              className=" hover:underline cursor-pointer transition ease-in duration-300"
+            >
+              Sign in
+            </Link>
+          </p>
         </form>
       </div>
     </div>
