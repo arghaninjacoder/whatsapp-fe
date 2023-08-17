@@ -3,14 +3,22 @@ import { yupResolver } from "@hookform/resolvers/yup"
 import { useNavigate, Link } from "react-router-dom"
 import { toast } from "react-hot-toast"
 import { PulseLoader } from "react-spinners"
+import { useState } from "react"
 
 import { signUpSchema } from "../../utils/validation"
 import AuthInput from "./AuthInput"
 import { useUser } from "../../hooks/useUser"
+import Picture from "./Picture"
+import axios from "axios"
+
+const cloud_secret = import.meta.env.VITE_CLOUD_SECRET
+const cloud_name = import.meta.env.VITE_CLOUD_NAME
 
 const RegisterForm = () => {
   const navigate = useNavigate()
   const { registerUser, status } = useUser()
+  const [picture, setPicture] = useState()
+  const [readablePicture, setReadablePicture] = useState("")
 
   const {
     register,
@@ -21,19 +29,39 @@ const RegisterForm = () => {
   })
 
   const onSubmit = async (data) => {
-    const result = await registerUser(data)
-    if (result.success) {
-      navigate("/")
-      toast.success(result.message)
+    let res
+    if (picture) {
+      // upload to cloudinary then register
+      await uploadImage().then(async (value) => {
+        res = await registerUser({ ...data, picture: value.secure_url })
+      })
     } else {
-      toast.error(result.message)
+      res = await registerUser({ ...data, picture: "" })
+    }
+    if (res.success) {
+      navigate("/")
+      toast.success(res.message)
+    } else {
+      toast.error(res.message)
     }
   }
 
+  const uploadImage = async () => {
+    let formData = new FormData()
+    formData.append("upload_preset", cloud_secret)
+    formData.append("file", picture)
+    const { data } = await axios.post(
+      `https://api.cloudinary.com/v1_1/${cloud_name}/image/upload`,
+      formData
+    )
+    console.log(data)
+    return data
+  }
+
   return (
-    <div className="h-screen w-full flex items-center justify-center overflow-hidden">
+    <div className="min-h-screen w-full flex items-center justify-center overflow-hidden">
       {/* Container */}
-      <div className="max-w-md space-y-8 p-10 dark:bg-dark_bg_2 rounded-xl">
+      <div className="w-full max-w-md space-y-8 p-10 dark:bg-dark_bg_2 rounded-xl">
         {/* hidden */}
         <div className="text-center dark:text-dark_text_1">
           <h2 className="mt-6 text-3xl font-bold">Welcome</h2>
@@ -58,7 +86,7 @@ const RegisterForm = () => {
           <AuthInput
             name="status"
             type="text"
-            placeholder="Status"
+            placeholder="Status (Optional)"
             register={register}
             error={errors?.status?.message}
           />
@@ -68,6 +96,13 @@ const RegisterForm = () => {
             placeholder="Password"
             register={register}
             error={errors?.password?.message}
+          />
+
+          {/* Picture */}
+          <Picture
+            readablePicture={readablePicture}
+            setReadablePicture={setReadablePicture}
+            setPicture={setPicture}
           />
 
           <button
